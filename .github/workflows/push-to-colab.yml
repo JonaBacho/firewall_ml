@@ -39,7 +39,7 @@ jobs:
 
         # Auth
         gauth = GoogleAuth()
-        gauth.ServiceAuth('creds.json')
+        gauth.credentials = gauth.LoadServiceAccountCredentials('creds.json')
         drive = GoogleDrive(gauth)
 
         def upload_file(filepath, folder_id):
