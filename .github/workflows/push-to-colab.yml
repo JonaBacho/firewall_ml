@@ -64,7 +64,20 @@ jobs:
         delete_all_in_folder(os.environ["TARGET_FOLDER_ID"])
 
         #Recréer l'arborescence et upload les fichiers
-        def upload_with_structure(local_path, parent_folder_id):
+        def upload_with_structure(origin, local_path, parent_folder_id):
+            if origin==0:
+              folder_name = os.path.basename(local_path)
+              drive_folder = drive.CreateFile({
+                  'title': folder_name,
+                  'mimeType': 'application/vnd.google-apps.folder',
+                  'parents': [{"id": parent_folder_id}]
+              })
+              drive_folder.Upload()
+              print(f"Dossier créé : {folder_name}")
+              current_drive_id = drive_folder['id']
+            else:
+              current_drive_id = parent_folder_id
+        
             for item in os.listdir(local_path):
                 item_path = os.path.join(local_path, item)
                 
@@ -73,27 +86,27 @@ jobs:
                     folder_metadata = {
                         'title': item,
                         'mimeType': 'application/vnd.google-apps.folder',
-                        'parents': [{'id': parent_folder_id}]
+                        'parents': [{'id': current_drive_id}]
                     }
                     new_folder = drive.CreateFile(folder_metadata)
                     new_folder.Upload()
                     print(f"Created folder: {item} (ID: {new_folder['id']})")
                     
                     # Upload récursif du contenu du sous-dossier
-                    upload_with_structure(item_path, new_folder['id'])
+                    upload_with_structure(origin+1, item_path, new_folder['id'])
                 else:
                     # Upload du fichier
                     file = drive.CreateFile({
                         'title': item,
-                        'parents': [{'id': parent_folder_id}]
+                        'parents': [{'id': current_drive_id}]
                     })
                     file.SetContentFile(item_path)
                     file.Upload()
                     print(f"Uploaded: {item}")
     
         print("Uploading new content with folder structure...")
-        upload_with_structure("notebooks", os.environ["TARGET_FOLDER_ID"])
-        upload_with_structure("data", os.environ["TARGET_FOLDER_ID"])
+        upload_with_structure(0, "notebooks", os.environ["TARGET_FOLDER_ID"])
+        upload_with_structure(0, "data", os.environ["TARGET_FOLDER_ID"])
     
         print("Done!")
         EOF
