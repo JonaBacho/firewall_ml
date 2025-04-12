@@ -28,7 +28,7 @@ jobs:
     - name: Upload to Google Drive
       env:
         GDRIVE_CREDENTIALS_JSON: ${{ secrets.GDRIVE_CREDENTIALS_JSON }}
-        TARGET_FOLDER_ID: "125S8zbz3wIkRZqpl7GQI1kHuiCQs-5Xh"
+        TARGET_FOLDER_ID: "1Q4h2xGEZTN-GNUCUc6KIva7-EYyl9ch9"
       run: |
         echo "$GDRIVE_CREDENTIALS_JSON" > creds.json
 
