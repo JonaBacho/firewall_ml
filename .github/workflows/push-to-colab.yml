@@ -46,15 +46,54 @@ jobs:
           pkg_resources.resource_filename(__name__, "creds.json"), scopes=['https://www.googleapis.com/auth/drive'])
 
         drive = GoogleDrive(gauth)
+        
+        #Supprimer tout le contenu existant dans le dossier
+        def delete_all_in_folder(folder_id):
+            file_list = drive.ListFile({
+                'q': f"'{folder_id}' in parents and trashed=false"
+            }).GetList()
+            
+            for file in file_list:
+                try:
+                    print(f"Deleting: {file['title']} (ID: {file['id']})")
+                    file.Delete()
+                except Exception as e:
+                    print(f"Failed to delete {file['title']}: {e}")
+    
+        print("Cleaning target folder...")
+        delete_all_in_folder(os.environ["TARGET_FOLDER_ID"])
 
-        def upload_file(filepath, folder_id):
-            filename = os.path.basename(filepath)
-            file = drive.CreateFile({'title': filename, 'parents':[{"id": folder_id}]})
-            file.SetContentFile(filepath)
-            file.Upload()
-            print(f"Uploaded: {filename}")
-
-        for dirpath, dirnames, filenames in os.walk("notebooks"):
-            for f in filenames:
-                upload_file(os.path.join(dirpath, f), os.environ["TARGET_FOLDER_ID"])
+        #Recréer l'arborescence et upload les fichiers
+        def upload_with_structure(local_path, parent_folder_id):
+            for item in os.listdir(local_path):
+                item_path = os.path.join(local_path, item)
+                
+                if os.path.isdir(item_path):
+                    # Créer un sous-dossier dans Drive
+                    folder_metadata = {
+                        'title': item,
+                        'mimeType': 'application/vnd.google-apps.folder',
+                        'parents': [{'id': parent_folder_id}]
+                    }
+                    new_folder = drive.CreateFile(folder_metadata)
+                    new_folder.Upload()
+                    print(f"Created folder: {item} (ID: {new_folder['id']})")
+                    
+                    # Upload récursif du contenu du sous-dossier
+                    upload_with_structure(item_path, new_folder['id'])
+                else:
+                    # Upload du fichier
+                    file = drive.CreateFile({
+                        'title': item,
+                        'parents': [{'id': parent_folder_id}]
+                    })
+                    file.SetContentFile(item_path)
+                    file.Upload()
+                    print(f"Uploaded: {item}")
+    
+        print("Uploading new content with folder structure...")
+        upload_with_structure("notebooks", os.environ["TARGET_FOLDER_ID"])
+        upload_with_structure("data", os.environ["TARGET_FOLDER_ID"])
+    
+        print("Done!")
         EOF
