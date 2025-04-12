@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --upgrade pip
-        pip install pydrive2
+        pip install pydrive2 oauth2client
 
     - name: Upload to Google Drive
       env:
@@ -35,11 +35,15 @@ jobs:
         python <<EOF
         from pydrive2.auth import GoogleAuth
         from pydrive2.drive import GoogleDrive
+        from oauth2client.service_account import ServiceAccountCredentials
         import os
 
         # Auth
         gauth = GoogleAuth()
-        gauth.credentials = gauth.LoadServiceAccountCredentials('creds.json')
+        # NOTE: if you are getting storage quota exceeded error, create a new service account, and give that service account permission to access the folder and replace the google_credentials.
+        gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name(
+          pkg_resources.resource_filename(__name__, "creds.json"), scopes=['https://www.googleapis.com/auth/drive'])
+
         drive = GoogleDrive(gauth)
 
         def upload_file(filepath, folder_id):
