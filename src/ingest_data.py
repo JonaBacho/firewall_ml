@@ -1,32 +1,46 @@
 import os
 import zipfile
 from abc import ABC, abstractmethod
-
 import pandas as pd
 
 
 # Define an abstract class for Data Ingestor
 class DataIngestor(ABC):
     @abstractmethod
-    def ingest(self, file_path: str) -> pd.DataFrame:
+    def ingest(self, file_path: str, target_filename: str) -> pd.DataFrame:
         """Abstract method to ingest data from a given file."""
         pass
 
 
 # Implement a concrete class for ZIP Ingestion
 class ZipDataIngestor(DataIngestor):
-    def ingest(self, file_path: str) -> pd.DataFrame:
+    def ingest(self, file_path: str, target_filename="firewall.csv") -> pd.DataFrame:
         """Extracts a .zip file and returns the content as a pandas DataFrame."""
         # Ensure the file is a .zip
+        if not target_filename.lower().endswith('.csv'):
+            target_filename += '.csv'
+
+        target_path = os.path.join("data/external", target_filename)
+
+        # Si le fichier cible existe déjà
+        if os.path.exists(target_path):
+            df = pd.read_csv(target_path)
+            return df
+
         if not file_path.endswith(".zip"):
             raise ValueError("The provided file is not a .zip file.")
 
         # Extract the zip file
         with zipfile.ZipFile(file_path, "r") as zip_ref:
-            zip_ref.extractall("extracted_data")
+            csv_files = [f for f in zip_ref.namelist() if f.lower().endswith('.csv')]
+            first_csv = csv_files[0]
+            extracted_path = zip_ref.extract(first_csv, "data/external")
+
+            # Renommer le fichier extrait
+            os.rename(extracted_path, target_path)
 
         # Find the extracted CSV file (assuming there is one CSV file inside the zip)
-        extracted_files = os.listdir("extracted_data")
+        extracted_files = os.listdir("data/external")
         csv_files = [f for f in extracted_files if f.endswith(".csv")]
 
         if len(csv_files) == 0:
@@ -35,7 +49,7 @@ class ZipDataIngestor(DataIngestor):
             raise ValueError("Multiple CSV files found. Please specify which one to use.")
 
         # Read the CSV into a DataFrame
-        csv_file_path = os.path.join("extracted_data", csv_files[0])
+        csv_file_path = os.path.join("data/external", csv_files[0])
         df = pd.read_csv(csv_file_path)
 
         # Return the DataFrame
